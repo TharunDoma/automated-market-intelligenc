@@ -17,11 +17,29 @@ Then open http://localhost:8501 in your browser.
 """
 
 import os
+from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 import snowflake.connector
 from dotenv import load_dotenv
+
+# Timezone constants — zoneinfo is built into Python 3.9+, no extra install needed
+UTC = ZoneInfo("UTC")
+EST = ZoneInfo("America/New_York")   # Handles EST/EDT switch automatically
+
+def fmt_dual(dt) -> str:
+    """Returns a timestamp string showing both UTC and EST/EDT."""
+    if pd.isna(dt):
+        return "—"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    est_dt  = dt.astimezone(EST)
+    tz_label = est_dt.strftime("%Z")   # Prints 'EST' or 'EDT' automatically
+    return (
+        f"{dt.strftime('%Y-%m-%d %H:%M')} UTC"
+        f"  /  {est_dt.strftime('%H:%M')} {tz_label}"
+    )
 
 # Load .env for local development.
 # On Streamlit Cloud, credentials come from st.secrets instead.
@@ -143,7 +161,7 @@ prev_run_df   = df[df["run_label"] == "🔵 Previous Run"]
 last_run_time = df["ingested_at"].max()
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Last Pipeline Run",    last_run_time.strftime("%Y-%m-%d %H:%M UTC"))
+col1.metric("Last Pipeline Run",    fmt_dual(last_run_time))
 col2.metric("Records This Run",     len(latest_run_df))
 col3.metric("Total Records",        len(df))
 col4.metric("Total Pipeline Runs",  df["ingested_at_floor"].nunique())
@@ -161,7 +179,7 @@ else:
     def render_run_table(run_df: pd.DataFrame, label: str, container):
         with container:
             st.markdown(f"**{label}**  \n"
-                        f"*Ingested at: {run_df['ingested_at'].max().strftime('%Y-%m-%d %H:%M UTC')}*")
+                        f"*Ingested: {fmt_dual(run_df['ingested_at'].max())}*")
             if run_df.empty:
                 st.caption("No data for this run yet.")
                 return
@@ -247,13 +265,25 @@ if search:
     )
     filtered = filtered[mask]
 
+display = filtered.copy()
+display["ingested_utc"] = display["ingested_at"].apply(
+    lambda x: x.strftime("%Y-%m-%d %H:%M") + " UTC" if pd.notna(x) else "—"
+)
+display["ingested_est"] = display["ingested_at"].apply(
+    lambda x: (
+        x.replace(tzinfo=UTC).astimezone(EST).strftime("%H:%M %Z")
+        if pd.notna(x) else "—"
+    )
+)
+
 st.dataframe(
-    filtered[[
-        "run_label", "ingested_at", "title", "sentiment",
-        "sentiment_score", "key_entity", "source_name",
+    display[[
+        "run_label", "ingested_utc", "ingested_est", "title",
+        "sentiment", "sentiment_score", "key_entity", "source_name",
     ]].rename(columns={
         "run_label":      "Run",
-        "ingested_at":    "Ingested At",
+        "ingested_utc":   "Ingested (UTC)",
+        "ingested_est":   "Ingested (EST/EDT)",
         "title":          "Title",
         "sentiment":      "Sentiment",
         "sentiment_score":"Score",
