@@ -52,7 +52,7 @@ jobs:
 
       # ── Step 3: Install dependencies ─────────────────────────────────────
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-pipeline.txt
 
       # ── Step 4: Run the pipeline ──────────────────────────────────────────
       # Secrets are injected as environment variables here.

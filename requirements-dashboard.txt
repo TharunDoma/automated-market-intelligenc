@@ -1,9 +1,9 @@
-# Dashboard-only dependencies — used by Streamlit Cloud
-# Much lighter than the full requirements.txt which includes
-# pipeline-only packages (groq, google-generativeai, etc.)
+# Dashboard-only dependencies for Streamlit Cloud
+# No version pins — allows Streamlit to use pre-built cached wheels
+# which avoids slow C-extension compilation (especially snowflake-connector-python)
 
-streamlit==1.35.0
-plotly==5.22.0
-pandas==2.2.2
-snowflake-connector-python==3.10.0
-python-dotenv==1.0.1
+streamlit
+plotly
+pandas
+snowflake-connector-python
+python-dotenv

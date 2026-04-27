@@ -1,24 +1,8 @@
-# ============================================================
-# Automated Market Intelligence Pipeline - Requirements
-# ============================================================
+# Dashboard dependencies — used by Streamlit Cloud
+# Kept lightweight so Streamlit Cloud deploys in under 2 minutes
 
-# --- Environment & Configuration ---
-python-dotenv==1.0.1          # Loads variables from .env into os.environ
-
-# --- HTTP & API Requests ---
-requests==2.31.0              # Used in the Extract layer to call the News API
-
-# --- AI / NLP Transformation ---
-google-generativeai==0.7.2    # Gemini API client (kept as backup)
-groq==0.11.0                  # Groq API client — free tier, 30 RPM, no billing needed
-httpx==0.27.2                 # Pinned — groq 0.11.0 incompatible with httpx>=0.28 (proxies arg removed)
-
-# --- Data Warehouse ---
-snowflake-connector-python==3.10.0  # Connects Python to Snowflake in the Load layer
-
-# --- Data Manipulation ---
-pandas==2.2.2                 # For structuring transformed records before loading
-
-# --- Dashboard ---
-streamlit==1.35.0             # Live pipeline monitor UI
-plotly==5.22.0                # Interactive charts for sentiment trends
+streamlit
+plotly
+pandas
+snowflake-connector-python
+python-dotenv
