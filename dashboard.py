@@ -23,7 +23,19 @@ import plotly.express as px
 import snowflake.connector
 from dotenv import load_dotenv
 
+# Load .env for local development.
+# On Streamlit Cloud, credentials come from st.secrets instead.
 load_dotenv()
+
+def _get_secret(key: str) -> str:
+    """
+    Reads a credential from Streamlit secrets (cloud) or os.environ (local).
+    This makes the dashboard work identically in both environments.
+    """
+    try:
+        return st.secrets[key]
+    except (KeyError, FileNotFoundError):
+        return os.getenv(key, "")
 
 # ── Page config ─────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -35,19 +47,18 @@ st.set_page_config(
 # ── Snowflake connection (cached so it doesn't reconnect on every refresh) ──
 @st.cache_resource
 def get_connection():
-    raw_account = os.getenv("SNOWFLAKE_ACCOUNT", "")
-    account = raw_account.split("#")[0].strip()
-    if "/" in account:
-        parts = account.split("/")
-        account = f"{parts[1].strip()}.{parts[0].strip()}"
+    raw_account = _get_secret("SNOWFLAKE_ACCOUNT").split("#")[0].strip()
+    if "/" in raw_account:
+        parts = raw_account.split("/")
+        raw_account = f"{parts[1].strip()}.{parts[0].strip()}"
 
     return snowflake.connector.connect(
-        user=os.getenv("SNOWFLAKE_USER"),
-        password=os.getenv("SNOWFLAKE_PASSWORD"),
-        account=account,
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-        database=os.getenv("SNOWFLAKE_DATABASE"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA"),
+        user=_get_secret("SNOWFLAKE_USER"),
+        password=_get_secret("SNOWFLAKE_PASSWORD"),
+        account=raw_account,
+        warehouse=_get_secret("SNOWFLAKE_WAREHOUSE"),
+        database=_get_secret("SNOWFLAKE_DATABASE"),
+        schema=_get_secret("SNOWFLAKE_SCHEMA"),
     )
 
 @st.cache_data(ttl=60)   # Re-query Snowflake every 60 seconds on refresh
