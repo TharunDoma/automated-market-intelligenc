@@ -34,6 +34,8 @@ jobs:
     name: Extract → Transform → Load
     runs-on: ubuntu-latest       # GitHub provides a fresh Linux VM for each run
     timeout-minutes: 15          # Kill the job if it hangs beyond 15 minutes
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # Opt into Node.js 24 ahead of the June 2026 deadline
 
     steps:
 
