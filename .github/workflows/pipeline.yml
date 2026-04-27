@@ -1,0 +1,78 @@
+# ============================================================
+# Automated Market Intelligence — Daily Pipeline
+# ============================================================
+#
+# WHAT THIS DOES:
+#   GitHub's servers run `python main.py` every morning at 8 AM UTC
+#   automatically — no laptop required. If the run fails, GitHub
+#   sends you an email alert with a link to the error logs.
+#
+# HOW CREDENTIALS WORK:
+#   We never put real passwords in this file. Instead, we store them
+#   as GitHub Secrets (encrypted) and inject them as environment
+#   variables at runtime. The pipeline code reads them via os.getenv()
+#   exactly like it reads from your local .env file.
+#
+# TO SET UP SECRETS:
+#   Go to your GitHub repo → Settings → Secrets and variables → Actions
+#   → New repository secret. Add one secret for each variable below.
+# ============================================================
+
+name: Market Intelligence Pipeline
+
+on:
+  # Runs every day at 8:00 AM UTC (3:00 AM EST / 12:00 AM PST)
+  schedule:
+    - cron: "0 8 * * *"
+
+  # Allows you to trigger a manual run from the GitHub Actions UI
+  # Go to: Actions tab → Market Intelligence Pipeline → Run workflow
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    name: Extract → Transform → Load
+    runs-on: ubuntu-latest       # GitHub provides a fresh Linux VM for each run
+    timeout-minutes: 15          # Kill the job if it hangs beyond 15 minutes
+
+    steps:
+
+      # ── Step 1: Check out your code ──────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Step 2: Set up Python ────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"            # Caches installed packages between runs (faster)
+
+      # ── Step 3: Install dependencies ─────────────────────────────────────
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Step 4: Run the pipeline ──────────────────────────────────────────
+      # Secrets are injected as environment variables here.
+      # The pipeline reads them via os.getenv() — same as your local .env.
+      - name: Run ETL pipeline
+        env:
+          NEWS_API_KEY:          ${{ secrets.NEWS_API_KEY }}
+          GROQ_API_KEY:          ${{ secrets.GROQ_API_KEY }}
+          SNOWFLAKE_USER:        ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD:    ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ACCOUNT:     ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_WAREHOUSE:   ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE:    ${{ secrets.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_SCHEMA:      ${{ secrets.SNOWFLAKE_SCHEMA }}
+          GEMINI_MOCK_MODE:      "false"   # Always use real Groq in production
+        run: python main.py
+
+      # ── Step 5: Upload logs as artifact (viewable in GitHub UI) ──────────
+      - name: Upload run logs
+        if: always()             # Upload even if the pipeline failed
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: "*.log"
+          if-no-files-found: ignore
