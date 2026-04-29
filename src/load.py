@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS MARKET_NEWS (
     DESCRIPTION     TEXT,
     URL             VARCHAR(2000),
     SOURCE_NAME     VARCHAR(200),
-    AUTHOR          VARCHAR(200),
+    AUTHOR          VARCHAR(500),
     PUBLISHED_AT    VARCHAR(50),
     SENTIMENT       VARCHAR(10),
     SENTIMENT_SCORE FLOAT,
@@ -230,12 +230,19 @@ def load_to_snowflake(records: list[dict]) -> int:
             # --- Insert the record ---
             # Note how the URL appears TWICE in the values tuple:
             # once for the INSERT columns, once for the WHERE NOT EXISTS check.
+            # Truncate fields that have a VARCHAR limit in Snowflake.
+            # NewsAPI sometimes returns multiple comma-separated authors
+            # (e.g. wire services) that exceed VARCHAR(200). Truncating here
+            # is safer than crashing the entire pipeline run.
+            author = (record.get("author") or "")[:400]
+            title  = (record.get("title")  or "")[:490]
+
             cursor.execute(INSERT_SQL, (
-                record.get("title", ""),
+                title,
                 record.get("description", ""),
                 url,
                 record.get("source_name", ""),
-                record.get("author", ""),
+                author,
                 record.get("published_at", ""),
                 record.get("sentiment", ""),
                 record.get("sentiment_score", 0.5),
